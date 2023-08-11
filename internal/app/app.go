@@ -16,7 +16,7 @@ func (a *app) SignIn(ctx context.Context, user model.User) (model.Tokens, error)
 		return model.Tokens{}, model.GenTokenError
 	}
 	if err = a.r.InsertToken(ctx, user, tokens.RefreshToken); err != nil {
-		return model.Tokens{}, model.RepoError
+		return model.Tokens{}, err
 	}
 	return tokens, nil
 }

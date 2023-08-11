@@ -48,7 +48,7 @@ func (t *Tokenizer) NewTokens(guid string) (model.Tokens, error) {
 	return tokens, nil
 }
 
-func TokenValidate(tokenStr string) error {
+func (t *Tokenizer) TokenValidate(tokenStr string) error {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
 	if err != nil {
 		return model.InvalidTokenError

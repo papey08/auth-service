@@ -1,8 +1,11 @@
 package server
 
-import "github.com/gin-gonic/gin"
+import (
+	"auth-service/internal/app"
+	"github.com/gin-gonic/gin"
+)
 
-func routes(r *gin.RouterGroup) {
-	r.GET("/sign-in/:guid") // TODO: make handler for the first route
-	r.POST("/refresh")      // TODO: make handler for the second route
+func routes(r *gin.RouterGroup, a app.App) {
+	r.GET("/sign-in/:guid", signIn(a))
+	r.POST("/refresh", refresh(a))
 }
