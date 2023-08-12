@@ -13,6 +13,7 @@ func NewHTTPServer(a app.App, host string, port int) *http.Server {
 	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 	api := router.Group("auth/v1")
+
 	routes(api, a)
 	return &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", host, port),

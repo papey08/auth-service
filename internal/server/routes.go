@@ -6,6 +6,6 @@ import (
 )
 
 func routes(r *gin.RouterGroup, a app.App) {
-	r.GET("/sign-in/:guid", signIn(a))
+	r.POST("/sign-in/:guid", signIn(a))
 	r.POST("/refresh", refresh(a))
 }

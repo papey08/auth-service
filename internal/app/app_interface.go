@@ -3,6 +3,7 @@ package app
 import (
 	"auth-service/internal/model"
 	"context"
+	"time"
 )
 
 type App interface {
@@ -13,7 +14,7 @@ type App interface {
 	RefreshTokens(ctx context.Context, refreshToken string) (model.Tokens, error)
 }
 
-func NewApp(r Repo, t Tokenizer) App {
+func New(r Repo, t Tokenizer) App {
 	return &app{
 		r: r,
 		t: t,
@@ -22,19 +23,20 @@ func NewApp(r Repo, t Tokenizer) App {
 
 type Repo interface {
 	// InsertToken adds new refresh token to database
-	InsertToken(ctx context.Context, user model.User, token string) error
+	InsertToken(ctx context.Context, user model.User, token string, expiresAt time.Time) error
 
 	// UpdateToken updates refresh token to a new token
-	UpdateToken(ctx context.Context, oldToken, newToken string) error
+	UpdateToken(ctx context.Context, oldToken, newToken string, expiresAt time.Time) error
 
-	// GetByRefreshToken returns user with given refreshToken
-	GetByRefreshToken(ctx context.Context, refreshToken string) (model.User, error)
+	// GetByRefreshToken returns user with given refreshToken and time when token expires
+	// or error if refreshToken has expired or not exists
+	GetByRefreshToken(ctx context.Context, refreshToken string) (model.User, time.Time, error)
+
+	// RemoveExpiredTokens removes all expired refresh tokens from the database
+	RemoveExpiredTokens(ctx context.Context)
 }
 
 type Tokenizer interface {
 	// NewTokens return new access and refresh tokens
 	NewTokens(guid string) (model.Tokens, error)
-
-	// TokenValidate checks if token has not expired and it is valid
-	TokenValidate(tokenStr string) error
 }

@@ -14,7 +14,7 @@ func successResponse(tokens model.Tokens) *gin.H {
 	return &gin.H{
 		"data": response{
 			AccessToken:  tokens.AccessToken,
-			RefreshToken: tokens.RefreshToken,
+			RefreshToken: tokens.RefreshToken.Token,
 		},
 		"error": nil,
 	}

@@ -1,0 +1,9 @@
+"server":
+  "host": "localhost"
+  "port": 8080
+
+"repo":
+  "host": "localhost"
+  "port": 27017
+  "dbname": "auth-repo"
+  "collection": "tokens"

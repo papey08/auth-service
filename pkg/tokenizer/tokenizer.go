@@ -2,6 +2,7 @@ package tokenizer
 
 import (
 	"auth-service/internal/model"
+	"github.com/Pallinder/go-randomdata"
 	"github.com/dgrijalva/jwt-go"
 	"time"
 )
@@ -9,6 +10,8 @@ import (
 const (
 	accessTokenExpiresAt  = time.Minute * 15
 	refreshTokenExpiresAt = time.Hour * 24 * 30
+
+	refreshTokenLength = 64
 )
 
 type Tokenizer struct {
@@ -22,45 +25,30 @@ func New(s string) *Tokenizer {
 }
 
 // NewAccessToken return access token with encrypted guid
-func (t *Tokenizer) newAccessToken(guid string) (string, error) {
-	return jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(accessTokenExpiresAt).Unix(),
-		Subject:   guid,
-	}).SignedString([]byte(t.signKey))
+func (t *Tokenizer) newAccessToken(data string) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS512)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["sub"] = data
+	claims["exp"] = time.Now().Add(accessTokenExpiresAt).Unix()
+	return token.SignedString([]byte(t.signKey))
 }
 
-// NewRefreshToken returns refresh token
-func (t *Tokenizer) newRefreshToken() (string, error) {
-	return jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(refreshTokenExpiresAt).Unix(),
-	}).SignedString([]byte(t.signKey))
+// NewRefreshToken generates new refresh token
+func (t *Tokenizer) newRefreshToken() model.RefreshToken {
+	return model.RefreshToken{
+		Token:     randomdata.Alphanumeric(refreshTokenLength),
+		ExpiresAt: time.Now().Add(refreshTokenExpiresAt),
+	}
 }
 
 func (t *Tokenizer) NewTokens(guid string) (model.Tokens, error) {
 	var tokens model.Tokens
 	var err error
+
 	if tokens.AccessToken, err = t.newAccessToken(guid); err != nil {
 		return model.Tokens{}, model.GenTokenError
 	}
-	if tokens.RefreshToken, err = t.newRefreshToken(); err != nil {
-		return model.Tokens{}, model.GenTokenError
-	}
-	return tokens, nil
-}
 
-func (t *Tokenizer) TokenValidate(tokenStr string) error {
-	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
-	if err != nil {
-		return model.InvalidTokenError
-	}
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		expirationTime := time.Unix(int64(claims["exp"].(float64)), 0)
-		if time.Now().Before(expirationTime) {
-			return nil
-		} else {
-			return model.ExpTokenError
-		}
-	} else {
-		return model.InvalidTokenError
-	}
+	tokens.RefreshToken = t.newRefreshToken()
+	return tokens, nil
 }
