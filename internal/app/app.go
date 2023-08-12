@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// app is an implementation of App interface
 type app struct {
 	r Repo
 	t Tokenizer
@@ -39,7 +40,6 @@ func (a *app) RefreshTokens(ctx context.Context, refreshToken string) (model.Tok
 
 	// searching given token in the database
 	u, t, err := a.r.GetByRefreshToken(ctx, decodedRefreshToken)
-
 	if err != nil {
 		return model.Tokens{}, err
 	} else if t.Before(time.Now()) {

@@ -59,8 +59,7 @@ func main() {
 
 	// preparing graceful shutdown
 	osSignals := make(chan os.Signal, 1)
-	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
-	signal.Notify(osSignals, os.Interrupt, syscall.SIGINT)
+	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
 		log.Println("Starting http server")

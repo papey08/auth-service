@@ -18,6 +18,7 @@ type Repo struct {
 	*mongo.Collection
 }
 
+// repoField is a struct of record in database
 type repoField struct {
 	RefreshToken string    `bson:"token"`
 	GUID         string    `bson:"guid"`
@@ -25,11 +26,13 @@ type repoField struct {
 }
 
 func (r *Repo) InsertToken(ctx context.Context, user model.User, token string, expiresAt time.Time) error {
+	// getting hash of refresh token
 	encryptedToken, err := cryptotools.GenerateBcryptHash(token)
 	if err != nil {
 		return model.TokenCryptError
 	}
 
+	// inserting record with hashed token into database
 	_, err = r.InsertOne(ctx, repoField{
 		RefreshToken: encryptedToken,
 		GUID:         user.GUID,
@@ -43,22 +46,24 @@ func (r *Repo) InsertToken(ctx context.Context, user model.User, token string, e
 }
 
 func (r *Repo) UpdateToken(ctx context.Context, oldToken, newToken string, expiresAt time.Time) error {
-	rf, err := r.getByRefreshToken(ctx, oldToken)
+	// finding hashed token by non-hashed token
+	rf, err := r.getFieldByToken(ctx, oldToken)
 	if err != nil {
 		return err
 	}
 
+	// hashing new token
 	encryptedNewToken, err := cryptotools.GenerateBcryptHash(newToken)
 	if err != nil {
 		return model.TokenCryptError
 	}
 
+	// updating hashed token in the database
 	filter := bson.M{"token": rf.RefreshToken}
 	update := bson.M{"$set": bson.M{
 		"token":      encryptedNewToken,
 		"expires_at": expiresAt,
 	}}
-
 	_, err = r.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return model.RepoError
@@ -68,7 +73,7 @@ func (r *Repo) UpdateToken(ctx context.Context, oldToken, newToken string, expir
 }
 
 func (r *Repo) GetByRefreshToken(ctx context.Context, refreshToken string) (model.User, time.Time, error) {
-	if rf, err := r.getByRefreshToken(ctx, refreshToken); err != nil {
+	if rf, err := r.getFieldByToken(ctx, refreshToken); err != nil {
 		return model.User{}, time.Time{}, err
 	} else {
 		return model.User{
@@ -85,7 +90,8 @@ func (r *Repo) RemoveExpiredTokens(ctx context.Context) {
 	}
 }
 
-func (r *Repo) getByRefreshToken(ctx context.Context, refreshToken string) (repoField, error) {
+// getFieldByToken search field in database where hashed token compares with non-hashed refreshToken
+func (r *Repo) getFieldByToken(ctx context.Context, refreshToken string) (repoField, error) {
 	cursor, err := r.Find(ctx, bson.D{})
 	if err != nil {
 		return repoField{}, model.RepoError
@@ -113,6 +119,8 @@ func New(ctx context.Context, c *mongo.Collection) app.Repo {
 	r := Repo{
 		Collection: c,
 	}
+
+	// once a day clears database from expired tokens
 	go func() {
 		for {
 			time.Sleep(removeExpTokensInterval)
