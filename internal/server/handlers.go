@@ -37,8 +37,6 @@ func refresh(a app.App) gin.HandlerFunc {
 		tokens, err := a.RefreshTokens(c, reqBody.RefreshToken)
 
 		switch {
-		case errors.Is(err, model.InvalidTokenError):
-			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 		case errors.Is(err, model.ExpTokenError):
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 		case errors.Is(err, model.NoTokenError):
