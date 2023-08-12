@@ -15,14 +15,10 @@ func signIn(a app.App) gin.HandlerFunc {
 		tokens, err := a.SignIn(c, model.User{GUID: guid})
 
 		switch {
-		case errors.Is(err, model.RepoError):
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
-		case errors.Is(err, model.GenTokenError):
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
-		case errors.Is(err, model.TokenCollisionError):
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
 		case err == nil:
 			c.JSON(http.StatusOK, successResponse(tokens))
+		default:
+			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
 		}
 	}
 }
@@ -41,12 +37,12 @@ func refresh(a app.App) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 		case errors.Is(err, model.NoTokenError):
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
-		case errors.Is(err, model.RepoError):
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
-		case errors.Is(err, model.GenTokenError):
-			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
+		case errors.Is(err, model.DecodeTokenError):
+			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 		case err == nil:
 			c.JSON(http.StatusOK, successResponse(tokens))
+		default:
+			c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
 		}
 	}
 }

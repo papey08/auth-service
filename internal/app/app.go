@@ -2,8 +2,8 @@ package app
 
 import (
 	"auth-service/internal/model"
+	cryptotools "auth-service/pkg/crypto-tools"
 	"context"
-	"log"
 	"time"
 )
 
@@ -23,15 +23,24 @@ func (a *app) SignIn(ctx context.Context, user model.User) (model.Tokens, error)
 	if err = a.r.InsertToken(ctx, user, tokens.RefreshToken.Token, tokens.RefreshToken.ExpiresAt); err != nil {
 		return model.Tokens{}, err
 	}
+
+	// changing refresh token format to base64
+	tokens.RefreshToken.Token = cryptotools.StringToBase64(tokens.RefreshToken.Token)
 	return tokens, nil
 }
 
 func (a *app) RefreshTokens(ctx context.Context, refreshToken string) (model.Tokens, error) {
+
+	// decoding given refresh token from base64
+	decodedRefreshToken, err := cryptotools.Base64ToString(refreshToken)
+	if err != nil {
+		return model.Tokens{}, model.DecodeTokenError
+	}
+
 	// searching given token in the database
-	u, t, err := a.r.GetByRefreshToken(ctx, refreshToken)
+	u, t, err := a.r.GetByRefreshToken(ctx, decodedRefreshToken)
 
 	if err != nil {
-		log.Println("RefreshTokens: GetByRefreshToken error: ", err.Error())
 		return model.Tokens{}, err
 	} else if t.Before(time.Now()) {
 		return model.Tokens{}, model.ExpTokenError
@@ -43,9 +52,17 @@ func (a *app) RefreshTokens(ctx context.Context, refreshToken string) (model.Tok
 		return model.Tokens{}, err
 	}
 
+	// encrypting new refresh token
+	encryptedNewRefreshToken, err := cryptotools.GenerateBcryptHash(tokens.RefreshToken.Token)
+	if err != nil {
+		return model.Tokens{}, model.TokenCryptError
+	}
+
 	// updating refresh token in the database
-	if err = a.r.UpdateToken(ctx, refreshToken, tokens.RefreshToken.Token, tokens.RefreshToken.ExpiresAt); err != nil {
-		log.Println("RefreshTokens: UpdateToken error: ", err.Error())
+	if err = a.r.UpdateToken(ctx,
+		decodedRefreshToken,
+		encryptedNewRefreshToken,
+		tokens.RefreshToken.ExpiresAt); err != nil {
 		return model.Tokens{}, err
 	}
 	return tokens, nil

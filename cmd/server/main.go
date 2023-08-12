@@ -7,6 +7,7 @@ import (
 	"auth-service/pkg/tokenizer"
 	"context"
 	"fmt"
+	"github.com/Pallinder/go-randomdata"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
@@ -50,7 +51,7 @@ func main() {
 
 	// configuring app
 	r := repo.New(ctx, collection)
-	t := tokenizer.New("bebra")
+	t := tokenizer.New(randomdata.Paragraph())
 	a := app.New(r, t)
 
 	// configuring server
