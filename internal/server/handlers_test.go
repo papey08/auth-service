@@ -11,23 +11,23 @@ import (
 	"time"
 )
 
-type tokenData struct {
-	Resp response `json:"data"`
-}
-
-func (s *serverTestSuite) signIn(url string) (tokenData, int, error) {
+func (s *serverTestSuite) signIn(url string) (tokensData, int, error) {
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf(s.baseURL+"/auth/v1"+url), nil)
 	if err != nil {
-		return tokenData{}, 0, err
+		return tokensData{}, 0, err
 	}
 
-	var resp tokenData
+	var resp response
 	code, err := s.getResponse(req, &resp)
 	if err != nil {
-		return tokenData{}, 0, err
+		return tokensData{}, 0, err
 	}
 
-	return resp, code, nil
+	if resp.Data == nil {
+		return tokensData{}, code, nil
+	}
+
+	return *resp.Data, code, nil
 }
 
 type signInMock struct {
@@ -40,7 +40,7 @@ type signInTest struct {
 	description string
 
 	givenURL           string
-	expectedTokens     response
+	expectedTokens     tokensData
 	expectedStatusCode int
 }
 
@@ -68,7 +68,7 @@ func (s *serverTestSuite) TestSignIn() {
 			description: "successful sign in",
 
 			givenURL: "/sign-in/qwerty",
-			expectedTokens: response{
+			expectedTokens: tokensData{
 				AccessToken:  "qwerty-access-token",
 				RefreshToken: "qwerty-refresh-token-in-base64",
 			},
@@ -82,32 +82,36 @@ func (s *serverTestSuite) TestSignIn() {
 
 	for _, test := range tests {
 		resp, code, err := s.signIn(test.givenURL)
-		assert.Equal(s.T(), test.expectedTokens, resp.Resp)
+		assert.Equal(s.T(), test.expectedTokens, resp)
 		assert.Equal(s.T(), test.expectedStatusCode, code)
 		assert.NoError(s.T(), err)
 	}
 }
 
-func (s *serverTestSuite) refresh(body map[string]any) (tokenData, int, error) {
+func (s *serverTestSuite) refresh(body map[string]any) (tokensData, int, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
-		return tokenData{}, 0, err
+		return tokensData{}, 0, err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, s.baseURL+"/auth/v1/refresh", bytes.NewReader(data))
 	if err != nil {
-		return tokenData{}, 0, err
+		return tokensData{}, 0, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
 
-	var resp tokenData
+	var resp response
 	code, err := s.getResponse(req, &resp)
 	if err != nil {
-		return tokenData{}, 0, err
+		return tokensData{}, 0, err
 	}
 
-	return resp, code, nil
+	if resp.Data == nil {
+		return tokensData{}, code, nil
+	}
+
+	return *resp.Data, code, nil
 }
 
 type refreshMock struct {
@@ -120,7 +124,7 @@ type refreshTest struct {
 	description string
 
 	givenBody          map[string]any
-	expectedTokens     response
+	expectedTokens     tokensData
 	expectedStatusCode int
 }
 
@@ -153,7 +157,7 @@ func (s *serverTestSuite) TestRefresh() {
 			givenBody: map[string]any{
 				"refresh_token": "qwerty-refresh-token",
 			},
-			expectedTokens: response{
+			expectedTokens: tokensData{
 				AccessToken:  "qwerty-access-token",
 				RefreshToken: "qwerty-refresh-token-in-base64",
 			},
@@ -165,7 +169,7 @@ func (s *serverTestSuite) TestRefresh() {
 			givenBody: map[string]any{
 				"refresh_token": "qwerty-refresh-token-expired",
 			},
-			expectedTokens:     response{},
+			expectedTokens:     tokensData{},
 			expectedStatusCode: http.StatusUnauthorized,
 		},
 	}
@@ -176,7 +180,7 @@ func (s *serverTestSuite) TestRefresh() {
 
 	for _, test := range tests {
 		resp, code, err := s.refresh(test.givenBody)
-		assert.Equal(s.T(), test.expectedTokens, resp.Resp)
+		assert.Equal(s.T(), test.expectedTokens, resp)
 		assert.Equal(s.T(), test.expectedStatusCode, code)
 		assert.NoError(s.T(), err)
 	}
