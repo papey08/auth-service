@@ -154,7 +154,7 @@ func (s *appTestSuite) TestRefreshTokens() {
 
 	tests := []refreshTokenTest{
 		{
-			description: "correct refresh operation",
+			description: "successful refresh operation",
 
 			givenToken: cryptotools.StringToBase64("qwerty-refresh-token"),
 			expectedTokens: model.Tokens{
