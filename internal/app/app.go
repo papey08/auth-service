@@ -65,5 +65,7 @@ func (a *app) RefreshTokens(ctx context.Context, refreshToken string) (model.Tok
 		tokens.RefreshToken.ExpiresAt); err != nil {
 		return model.Tokens{}, err
 	}
+
+	tokens.RefreshToken.Token = cryptotools.StringToBase64(tokens.RefreshToken.Token)
 	return tokens, nil
 }
