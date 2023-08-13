@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>app: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">auth-service/internal/app/app.go (72.0%)</option>
+				
+				<option value="file1">auth-service/internal/app/app_interface.go (100.0%)</option>
+				
+				<option value="file2">auth-service/internal/server/handlers.go (70.6%)</option>
+				
+				<option value="file3">auth-service/internal/server/responses.go (100.0%)</option>
+				
+				<option value="file4">auth-service/internal/server/routes.go (100.0%)</option>
+				
+				<option value="file5">auth-service/internal/server/server.go (100.0%)</option>
+				
+				<option value="file6">auth-service/pkg/crypto-tools/crypto_tools.go (75.0%)</option>
+				
+				<option value="file7">auth-service/pkg/tokenizer/tokenizer.go (46.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package app
+
+import (
+        "auth-service/internal/model"
+        cryptotools "auth-service/pkg/crypto-tools"
+        "context"
+        "time"
+)
+
+// app is an implementation of App interface
+type app struct {
+        r Repo
+        t Tokenizer
+}
+
+func (a *app) SignIn(ctx context.Context, user model.User) (model.Tokens, error) <span class="cov8" title="1">{
+        // generating a new pair of tokens
+        tokens, err := a.t.NewTokens(user.GUID)
+        if err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, model.GenTokenError
+        }</span>
+
+        // inserting new tokens to the database
+        <span class="cov8" title="1">if err = a.r.InsertToken(ctx, user, tokens.RefreshToken.Token, tokens.RefreshToken.ExpiresAt); err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, err
+        }</span>
+
+        // changing refresh token format to base64
+        <span class="cov8" title="1">tokens.RefreshToken.Token = cryptotools.StringToBase64(tokens.RefreshToken.Token)
+        return tokens, nil</span>
+}
+
+func (a *app) RefreshTokens(ctx context.Context, refreshToken string) (model.Tokens, error) <span class="cov8" title="1">{
+
+        // decoding given refresh token from base64
+        decodedRefreshToken, err := cryptotools.Base64ToString(refreshToken)
+        if err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, model.DecodeTokenError
+        }</span>
+
+        // searching given token in the database
+        <span class="cov8" title="1">u, t, err := a.r.GetByRefreshToken(ctx, decodedRefreshToken)
+        if err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, err
+        }</span> else<span class="cov8" title="1"> if t.Before(time.Now()) </span><span class="cov8" title="1">{
+                return model.Tokens{}, model.ExpTokenError
+        }</span>
+
+        // generating a new pair of tokens
+        <span class="cov8" title="1">tokens, err := a.t.NewTokens(u.GUID)
+        if err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, err
+        }</span>
+
+        // encrypting new refresh token
+        <span class="cov8" title="1">encryptedNewRefreshToken, err := cryptotools.GenerateBcryptHash(tokens.RefreshToken.Token)
+        if err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, model.TokenCryptError
+        }</span>
+
+        // updating refresh token in the database
+        <span class="cov8" title="1">if err = a.r.UpdateToken(ctx,
+                decodedRefreshToken,
+                encryptedNewRefreshToken,
+                tokens.RefreshToken.ExpiresAt); err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, err
+        }</span>
+
+        <span class="cov8" title="1">tokens.RefreshToken.Token = cryptotools.StringToBase64(tokens.RefreshToken.Token)
+        return tokens, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package app
+
+import (
+        "auth-service/internal/model"
+        "context"
+        "time"
+)
+
+type App interface {
+        // SignIn return access and refresh tokens of signed user
+        SignIn(ctx context.Context, user model.User) (model.Tokens, error)
+
+        // RefreshTokens return access and refresh tokens if refreshToken is valid
+        RefreshTokens(ctx context.Context, refreshToken string) (model.Tokens, error)
+}
+
+func New(r Repo, t Tokenizer) App <span class="cov8" title="1">{
+        return &amp;app{
+                r: r,
+                t: t,
+        }
+}</span>
+
+type Repo interface {
+        // InsertToken adds new refresh token to database
+        InsertToken(ctx context.Context, user model.User, token string, expiresAt time.Time) error
+
+        // UpdateToken updates refresh token to a new token
+        UpdateToken(ctx context.Context, oldToken, newToken string, expiresAt time.Time) error
+
+        // GetByRefreshToken returns user with given refreshToken and time when token expires
+        // or error if refreshToken has expired or not exists
+        GetByRefreshToken(ctx context.Context, refreshToken string) (model.User, time.Time, error)
+
+        // RemoveExpiredTokens removes all expired refresh tokens from the database
+        RemoveExpiredTokens(ctx context.Context)
+}
+
+type Tokenizer interface {
+        // NewTokens return new access and refresh tokens
+        NewTokens(guid string) (model.Tokens, error)
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package server
+
+import (
+        "auth-service/internal/app"
+        "auth-service/internal/model"
+        "errors"
+        "github.com/gin-gonic/gin"
+        "net/http"
+)
+
+func signIn(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                guid := c.Param("guid")
+
+                tokens, err := a.SignIn(c, model.User{GUID: guid})
+
+                switch </span>{
+                case err == nil:<span class="cov8" title="1">
+                        c.JSON(http.StatusOK, successResponse(tokens))</span>
+                default:<span class="cov0" title="0">
+                        c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))</span>
+                }
+        }
+}
+
+func refresh(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody refreshRequest
+                if err := c.BindJSON(&amp;reqBody); err != nil </span><span class="cov0" title="0">{
+                        c.AbortWithStatusJSON(http.StatusBadRequest, errorResponse(err))
+                }</span>
+
+                <span class="cov8" title="1">tokens, err := a.RefreshTokens(c, reqBody.RefreshToken)
+
+                switch </span>{
+                case errors.Is(err, model.ExpTokenError):<span class="cov8" title="1">
+                        c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))</span>
+                case errors.Is(err, model.NoTokenError):<span class="cov0" title="0">
+                        c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))</span>
+                case errors.Is(err, model.DecodeTokenError):<span class="cov0" title="0">
+                        c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))</span>
+                case err == nil:<span class="cov8" title="1">
+                        c.JSON(http.StatusOK, successResponse(tokens))</span>
+                default:<span class="cov0" title="0">
+                        c.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))</span>
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package server
+
+import (
+        "auth-service/internal/model"
+        "github.com/gin-gonic/gin"
+)
+
+type response struct {
+        AccessToken  string `json:"access_token"`
+        RefreshToken string `json:"refresh_token"`
+}
+
+func successResponse(tokens model.Tokens) *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data": response{
+                        AccessToken:  tokens.AccessToken,
+                        RefreshToken: tokens.RefreshToken.Token,
+                },
+                "error": nil,
+        }
+}</span>
+
+func errorResponse(err error) *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data":  nil,
+                "error": err.Error(),
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package server
+
+import (
+        "auth-service/internal/app"
+        "github.com/gin-gonic/gin"
+)
+
+func routes(r *gin.RouterGroup, a app.App) <span class="cov8" title="1">{
+        r.POST("/sign-in/:guid", signIn(a))
+        r.POST("/refresh", refresh(a))
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package server
+
+import (
+        "auth-service/internal/app"
+        "fmt"
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+)
+
+// NewHTTPServer creates http.Server with routes
+func NewHTTPServer(a app.App, host string, port int) *http.Server <span class="cov8" title="1">{
+        gin.SetMode(gin.DebugMode)
+        router := gin.Default()
+        api := router.Group("auth/v1")
+
+        routes(api, a)
+        return &amp;http.Server{
+                Addr:    fmt.Sprintf("%s:%d", host, port),
+                Handler: router,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package crypto_tools
+
+import (
+        "encoding/base64"
+        "golang.org/x/crypto/bcrypt"
+)
+
+// StringToBase64 converts string to base64 format
+func StringToBase64(input string) string <span class="cov8" title="1">{
+        return base64.StdEncoding.EncodeToString([]byte(input))
+}</span>
+
+// Base64ToString converts base64 to string
+func Base64ToString(base64String string) (string, error) <span class="cov8" title="1">{
+        if decodedBytes, err := base64.StdEncoding.DecodeString(base64String); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span> else<span class="cov8" title="1"> {
+                return string(decodedBytes), nil
+        }</span>
+}
+
+// GenerateBcryptHash returns hash of the input string
+func GenerateBcryptHash(input string) (string, error) <span class="cov8" title="1">{
+        if hash, err := bcrypt.GenerateFromPassword([]byte(input), bcrypt.DefaultCost); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span> else<span class="cov8" title="1"> {
+                return string(hash), nil
+        }</span>
+}
+
+// CheckHash checks if hash was generated by input
+func CheckHash(hash, input string) bool <span class="cov8" title="1">{
+        return bcrypt.CompareHashAndPassword([]byte(hash), []byte(input)) == nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package tokenizer
+
+import (
+        "auth-service/internal/model"
+        "github.com/Pallinder/go-randomdata"
+        "github.com/dgrijalva/jwt-go"
+        "time"
+)
+
+const (
+        accessTokenExpiresAt  = time.Minute * 15
+        refreshTokenExpiresAt = time.Hour * 24 * 30
+
+        refreshTokenLength = 64
+)
+
+type Tokenizer struct {
+        signKey string
+}
+
+func New(s string) *Tokenizer <span class="cov8" title="1">{
+        return &amp;Tokenizer{
+                signKey: s,
+        }
+}</span>
+
+// NewAccessToken return access token with encrypted guid
+func (t *Tokenizer) newAccessToken(data string) (string, error) <span class="cov8" title="1">{
+        token := jwt.New(jwt.SigningMethodHS512)
+        claims := token.Claims.(jwt.MapClaims)
+        claims["sub"] = data
+        claims["exp"] = time.Now().Add(accessTokenExpiresAt).Unix()
+        return token.SignedString([]byte(t.signKey))
+}</span>
+
+// NewRefreshToken generates new refresh token
+func (t *Tokenizer) newRefreshToken() model.RefreshToken <span class="cov0" title="0">{
+        return model.RefreshToken{
+                Token:     randomdata.Alphanumeric(refreshTokenLength),
+                ExpiresAt: time.Now().Add(refreshTokenExpiresAt),
+        }
+}</span>
+
+func (t *Tokenizer) NewTokens(guid string) (model.Tokens, error) <span class="cov0" title="0">{
+        var tokens model.Tokens
+        var err error
+
+        if tokens.AccessToken, err = t.newAccessToken(guid); err != nil </span><span class="cov0" title="0">{
+                return model.Tokens{}, model.GenTokenError
+        }</span>
+
+        <span class="cov0" title="0">tokens.RefreshToken = t.newRefreshToken()
+        return tokens, nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
