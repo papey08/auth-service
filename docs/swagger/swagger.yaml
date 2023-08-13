@@ -1,0 +1,76 @@
+basePath: /auth/v1
+definitions:
+  server.refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  server.response:
+    properties:
+      data:
+        $ref: '#/definitions/server.tokensData'
+      error:
+        type: string
+    type: object
+  server.tokensData:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Часть сервиса аутентификации, состоит из двух маршрутов
+  title: auth-service
+  version: "1.0"
+paths:
+  /refresh:
+    post:
+      description: Возвращает новые Access и Refresh токены
+      parameters:
+      - description: Refresh токен в JSON
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешное обновление токенов
+          schema:
+            $ref: '#/definitions/server.response'
+        "401":
+          description: Срок действия токена истёк
+          schema:
+            $ref: '#/definitions/server.response'
+        "500":
+          description: Проблемы на стороне сервера
+          schema:
+            $ref: '#/definitions/server.response'
+      summary: Обновление токенов
+  /sign-in/{guid}:
+    post:
+      description: Возвращает пару из Access и Refresh токенов
+      parameters:
+      - description: GUID пользователя
+        in: path
+        name: guid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная аутентификация
+          schema:
+            $ref: '#/definitions/server.response'
+        "500":
+          description: Проблемы на стороне сервера
+          schema:
+            $ref: '#/definitions/server.response'
+      summary: Аутентификация по guid
+swagger: "2.0"

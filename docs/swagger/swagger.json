@@ -1,0 +1,117 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Часть сервиса аутентификации, состоит из двух маршрутов",
+        "title": "auth-service",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/auth/v1",
+    "paths": {
+        "/refresh": {
+            "post": {
+                "description": "Возвращает новые Access и Refresh токены",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Обновление токенов",
+                "parameters": [
+                    {
+                        "description": "Refresh токен в JSON",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.refreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешное обновление токенов",
+                        "schema": {
+                            "$ref": "#/definitions/server.response"
+                        }
+                    },
+                    "401": {
+                        "description": "Срок действия токена истёк",
+                        "schema": {
+                            "$ref": "#/definitions/server.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Проблемы на стороне сервера",
+                        "schema": {
+                            "$ref": "#/definitions/server.response"
+                        }
+                    }
+                }
+            }
+        },
+        "/sign-in/{guid}": {
+            "post": {
+                "description": "Возвращает пару из Access и Refresh токенов",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Аутентификация по guid",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "GUID пользователя",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная аутентификация",
+                        "schema": {
+                            "$ref": "#/definitions/server.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Проблемы на стороне сервера",
+                        "schema": {
+                            "$ref": "#/definitions/server.response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "server.refreshRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.response": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/server.tokensData"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.tokensData": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

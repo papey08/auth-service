@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "auth-service/docs/swagger"
 	"auth-service/internal/app"
 	"auth-service/internal/repo"
 	"auth-service/internal/server"
@@ -25,6 +26,13 @@ func InitConfig() error {
 	viper.SetConfigFile("configs/config.yml")
 	return viper.ReadInConfig()
 }
+
+//	@title			auth-service
+//	@version		1.0
+//	@description	Часть сервиса аутентификации, состоит из двух маршрутов
+
+//	@host		localhost:8080
+//	@BasePath	/auth/v1
 
 func main() {
 	ctx := context.Background()
