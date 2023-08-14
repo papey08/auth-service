@@ -10,7 +10,7 @@ import (
 
 // NewHTTPServer creates http.Server with routes
 func NewHTTPServer(a app.App, host string, port int) *http.Server {
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	api := router.Group("auth/v1")
 
